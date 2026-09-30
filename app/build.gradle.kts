@@ -6,12 +6,12 @@ plugins {
 
 android {
     namespace = "com.saeed.musicapp"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.saeed.musicapp"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
     }
@@ -44,7 +44,8 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.9.3")
 
     // Import & Convert pipeline
-    implementation("com.github.teamnewpipe:NewPipeExtractor:v0.24.8") // step 1: URL -> direct audio stream URL
+    implementation("com.github.teamnewpipe:NewPipeExtractor:v0.26.5") // step 1: URL -> direct audio stream URL
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")              // HTTP client NewPipeExtractor's Downloader needs
     implementation("androidx.media3:media3-transformer:1.11.0")       // step 3: raw audio -> AAC
     implementation("androidx.media3:media3-common:1.11.0")
 
