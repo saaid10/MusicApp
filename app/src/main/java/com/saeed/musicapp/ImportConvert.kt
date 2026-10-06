@@ -3,8 +3,10 @@ package com.saeed.musicapp
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
@@ -13,9 +15,13 @@ import okhttp3.OkHttpClient
 import org.schabi.newpipe.extractor.MediaFormat
 import org.schabi.newpipe.extractor.stream.AudioStream
 import org.schabi.newpipe.extractor.stream.StreamInfo
+import org.schabi.newpipe.extractor.timeago.patterns.fil
 import java.io.File
 
-fun getAudioStream(url: String): AudioStream {
+
+data class ImportedAudio (val videoId: String, val audioStream: AudioStream)
+
+fun getAudioStream(url: String): ImportedAudio {
     val info = StreamInfo.getInfo(url)
     if (info.audioStreams.isEmpty()) error("No audio streams found")
     val m4aStreams = info.audioStreams.filter { it.format == MediaFormat.M4A }
@@ -24,7 +30,7 @@ fun getAudioStream(url: String): AudioStream {
     val withinLimit = knownBitrate.filter { it.averageBitrate <= 192 }
     val best = withinLimit.maxByOrNull { it.averageBitrate }
     val item = best ?: knownBitrate.minBy { it.averageBitrate }
-    return item
+    return ImportedAudio(videoId = info.id, audioStream = item)
 }
 
 fun downloadAudioToCache(url: String, context: Context): File {
@@ -48,7 +54,8 @@ fun downloadAudioToCache(url: String, context: Context): File {
     return outputFile
 }
 
-fun transcodeToAac(file: File, context: Context): Unit {
+@OptIn(UnstableApi::class)
+fun transcodeToAac(file: File, context: Context, videoId: String): Unit {
     val mediaItem = MediaItem.fromUri(Uri.fromFile(file))
 
     val outputDest = File(context.cacheDir, "converted_audio")
@@ -58,6 +65,8 @@ fun transcodeToAac(file: File, context: Context): Unit {
         .addListener(object : Transformer.Listener {
             override fun onCompleted(composition: Composition, exportResult: ExportResult) {
                 Log.d("MusicApp", "Transcode complete: ${outputDest.absolutePath}")
+                val movedToStorage = moveToPermanentStorage(outputDest, context, videoId)
+                Log.d("MusicApp", "File moved to storage: ${movedToStorage.absolutePath}")
             }
 
             override fun onError(composition: Composition, exportResult: ExportResult, exportException: ExportException) {
@@ -67,4 +76,11 @@ fun transcodeToAac(file: File, context: Context): Unit {
 
     val transformer = transformerBuilder.build()
     transformer.start(mediaItem, outputDest.absolutePath)
+}
+
+fun moveToPermanentStorage(file: File, context: Context, videoId: String): File {
+    val destination = File(context.filesDir, "${videoId}.m4a" )
+    val fileTransfer = file.copyTo(destination, true)
+    file.delete()
+    return fileTransfer
 }

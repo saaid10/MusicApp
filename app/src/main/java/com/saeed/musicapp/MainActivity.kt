@@ -8,7 +8,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import org.schabi.newpipe.extractor.NewPipe
-import org.schabi.newpipe.extractor.timeago.patterns.it
 import org.schabi.newpipe.extractor.MediaFormat
 
 class MainActivity : ComponentActivity() {
@@ -18,12 +17,16 @@ class MainActivity : ComponentActivity() {
         NewPipe.init(DownloaderImpl())
         Thread {
             try {
-                val audioStream = getAudioStream("https://www.youtube.com/watch?v=Y4HWvsGs0rY")
-                val audioCache = downloadAudioToCache(audioStream.url!!, context = this@MainActivity)
-                if (audioStream.format != MediaFormat.M4A) {
-                    runOnUiThread { transcodeToAac(audioCache, this@MainActivity) }
+                val importedAudio = getAudioStream("https://www.youtube.com/watch?v=Y4HWvsGs0rY")
+                val audioCache = downloadAudioToCache(importedAudio.audioStream.url!!, context = this@MainActivity)
+                if (importedAudio.audioStream.format != MediaFormat.M4A) {
+                    runOnUiThread { transcodeToAac(audioCache, this@MainActivity, importedAudio.videoId) }
                 }
-                Log.d("MusicApp", "Audio URL: ${audioStream.url}, Format: ${audioStream.format} Bitrate: ${audioStream.averageBitrate}")
+                else {
+                    val movedToStorage = moveToPermanentStorage(file = audioCache , this@MainActivity, importedAudio.videoId )
+                    Log.d("MusicApp", "File saved permanently: ${movedToStorage.absolutePath}")
+                }
+                Log.d("MusicApp", "Audio URL: ${importedAudio.audioStream.url}, Format: ${importedAudio.audioStream.format} Bitrate: ${importedAudio.audioStream.averageBitrate} VideoId: ${importedAudio.videoId}")
                 Log.d("MusicApp", "Download file: ${audioCache.absoluteFile}")
             }
             catch (e: Exception)

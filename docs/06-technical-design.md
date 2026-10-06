@@ -53,3 +53,11 @@ Reasoning: ~128 kbps AAC is good, and ~192-256 kbps sounds identical to the orig
 **Skip step 3 implemented (2026-09-30):** `MainActivity` only calls `transcodeToAac` when `audioStream.format != MediaFormat.M4A`. Confirmed on-device: M4A stream -> no `Transcode complete` line. Consequence for step 4: the file to keep is `cache/raw_audio` when step 3 is skipped, `cache/converted_audio` otherwise.
 
 Observed once: `SocketTimeoutException` during step 2 (`copyTo` in `downloadAudioToCache`), i.e. no data for OkHttp's default 10 s read timeout. Rerun succeeded. Treated as a one-off network hiccup for now; revisit if it recurs (e.g. timeout config or retry).
+
+## Step 4 design (2026-09-30)
+
+- New function in `ImportConvert.kt`: input file + `Context`, output the moved `File`.
+- Called in two places: the skip path (`else` branch in `MainActivity`, moves `raw_audio`) and the transcode path (inside `onCompleted`, moves `converted_audio`). The move can't happen after `transformer.start()`: that call returns before the file exists.
+- Target folder: `filesDir` (kept until the app deletes it or is uninstalled), not `cacheDir` (Android may wipe it when storage is low).
+- File name = the video's ID (e.g. `Y4HWvsGs0rY`), not the title: titles aren't unique and can contain characters that aren't allowed in file names. The display title will be stored separately (later, in Room). Same URL twice -> same ID -> detectable duplicate (ties to the duplicate-detection user stories).
+- The video ID comes from `StreamInfo.id`, but `getAudioStream` discards `info`. Decision: return both values together in a `data class ImportedAudio(videoId: String, audioStream: AudioStream)` (chosen over `Pair` for readable names). Not yet written.
