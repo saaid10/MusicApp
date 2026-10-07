@@ -59,5 +59,25 @@ Observed once: `SocketTimeoutException` during step 2 (`copyTo` in `downloadAudi
 - New function in `ImportConvert.kt`: input file + `Context`, output the moved `File`.
 - Called in two places: the skip path (`else` branch in `MainActivity`, moves `raw_audio`) and the transcode path (inside `onCompleted`, moves `converted_audio`). The move can't happen after `transformer.start()`: that call returns before the file exists.
 - Target folder: `filesDir` (kept until the app deletes it or is uninstalled), not `cacheDir` (Android may wipe it when storage is low).
-- File name = the video's ID (e.g. `Y4HWvsGs0rY`), not the title: titles aren't unique and can contain characters that aren't allowed in file names. The display title will be stored separately (later, in Room). Same URL twice -> same ID -> detectable duplicate (ties to the duplicate-detection user stories).
-- The video ID comes from `StreamInfo.id`, but `getAudioStream` discards `info`. Decision: return both values together in a `data class ImportedAudio(videoId: String, audioStream: AudioStream)` (chosen over `Pair` for readable names). Not yet written.
+- File name = the video's ID plus `.m4a` (e.g. `Y4HWvsGs0rY.m4a`), not the title: titles aren't unique and can contain characters that aren't allowed in file names. The display title will be stored separately (later, in Room). Same video twice -> same ID -> detectable duplicate (ties to the duplicate-detection user stories). The `.m4a` extension is correct on both paths, since both produce AAC in an MP4 container.
+- The video ID comes from `StreamInfo.id`, but `getAudioStream` discarded `info`. Decision: return both values together in a `data class ImportedAudio(videoId: String, audioStream: AudioStream)` (chosen over `Pair` for readable names).
+
+## Step 4 implemented (2026-10-07)
+
+`moveToPermanentStorage(file, context, videoId): File` copies the file to `filesDir/<videoId>.m4a` (`copyTo(..., overwrite = true)`), deletes the cache original, and returns the copy. `transcodeToAac` takes `videoId` as an extra parameter so `onCompleted` can call it. Both paths confirmed on-device.
+
+**Cache cleanup:** on the transcode path, `raw_audio` (the input to step 3) was never deleted. Now `transcodeToAac` deletes it in both `onCompleted` and `onError`. After either outcome it has no further use: there is no retry feature, and a retry would need a fresh download anyway (stream URLs expire). In `onCompleted` the delete runs *before* the move, so it still happens if the move throws.
+
+**Move failure inside `onCompleted`:** `onCompleted` runs later on the main thread, so `MainActivity`'s `try/catch` (on the background `Thread`) can't catch an exception from it. An uncaught exception there would crash the app. So `onCompleted` wraps the move and its log in its own `try/catch`. The `catch` logs the error and deletes `converted_audio`. Confirmed on-device: the cache folder is empty after the transcode path.
+
+## Duplicate detection (2026-10-07)
+
+- `isAlreadyImported(videoId, context): Boolean` checks whether `filesDir/<videoId>.m4a` exists. It compares by video ID, not URL: one video can have many URLs (`youtu.be/...`, `&t=30`, ...).
+- Checked right after step 1, which is the first point where the ID is known. That way a duplicate costs no download or transcode.
+- Current behavior (no UI yet): log `Already in the library` and stop.
+- Planned UX: a dialog with **Skip** (highlighted, since the user most likely forgot they have it) or **Replace**. Replace needs no extra code: the normal pipeline already overwrites (`overwrite = true`). There is no "add again" option for the library, because the result would be the same file under the same name.
+- Playlists will allow adding a song twice (a playlist entry only points to a library file). Deferred to the Playlists/Room phase.
+- Both paths confirmed on-device.
+- Known risk: the filename pattern `"${videoId}.m4a"` is written in two functions (`moveToPermanentStorage`, `isAlreadyImported`). If they drift apart, the check stops finding anything without any error. A candidate for a small shared helper later.
+
+**Logging:** the step 1 log (URL / format / bitrate / ID) now runs right after `getAudioStream`, so it prints on every path, including duplicates and failed downloads. The `Download file:` log runs right after the download, while `raw_audio` still exists.
