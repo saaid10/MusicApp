@@ -18,16 +18,23 @@ class MainActivity : ComponentActivity() {
         Thread {
             try {
                 val importedAudio = getAudioStream("https://www.youtube.com/watch?v=Y4HWvsGs0rY")
-                val audioCache = downloadAudioToCache(importedAudio.audioStream.url!!, context = this@MainActivity)
-                if (importedAudio.audioStream.format != MediaFormat.M4A) {
-                    runOnUiThread { transcodeToAac(audioCache, this@MainActivity, importedAudio.videoId) }
+                if (isAlreadyImported(importedAudio.videoId, context = this@MainActivity))
+                {
+                    Log.d("MusicApp", "Already in the library")
                 }
-                else {
-                    val movedToStorage = moveToPermanentStorage(file = audioCache , this@MainActivity, importedAudio.videoId )
-                    Log.d("MusicApp", "File saved permanently: ${movedToStorage.absolutePath}")
+                else
+                {
+                    val audioCache = downloadAudioToCache(importedAudio.audioStream.url!!, context = this@MainActivity)
+                    if (importedAudio.audioStream.format != MediaFormat.M4A) {
+                        runOnUiThread { transcodeToAac(audioCache, this@MainActivity, importedAudio.videoId) }
+                    }
+                    else {
+                        val movedToStorage = moveToPermanentStorage(file = audioCache , this@MainActivity, importedAudio.videoId )
+                        Log.d("MusicApp", "File saved permanently: ${movedToStorage.absolutePath}")
+                    }
+                    Log.d("MusicApp", "Audio URL: ${importedAudio.audioStream.url}, Format: ${importedAudio.audioStream.format} Bitrate: ${importedAudio.audioStream.averageBitrate} VideoId: ${importedAudio.videoId}")
+                    Log.d("MusicApp", "Download file: ${audioCache.absoluteFile}")
                 }
-                Log.d("MusicApp", "Audio URL: ${importedAudio.audioStream.url}, Format: ${importedAudio.audioStream.format} Bitrate: ${importedAudio.audioStream.averageBitrate} VideoId: ${importedAudio.videoId}")
-                Log.d("MusicApp", "Download file: ${audioCache.absoluteFile}")
             }
             catch (e: Exception)
             {

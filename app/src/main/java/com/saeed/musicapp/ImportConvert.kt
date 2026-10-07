@@ -1,5 +1,6 @@
 package com.saeed.musicapp
 
+import android.R
 import android.content.Context
 import android.net.Uri
 import android.util.Log
@@ -65,12 +66,22 @@ fun transcodeToAac(file: File, context: Context, videoId: String): Unit {
         .addListener(object : Transformer.Listener {
             override fun onCompleted(composition: Composition, exportResult: ExportResult) {
                 Log.d("MusicApp", "Transcode complete: ${outputDest.absolutePath}")
-                val movedToStorage = moveToPermanentStorage(outputDest, context, videoId)
-                Log.d("MusicApp", "File moved to storage: ${movedToStorage.absolutePath}")
+                file.delete()
+                try {
+                    val movedToStorage = moveToPermanentStorage(outputDest, context, videoId)
+                    Log.d("MusicApp", "File moved to storage: ${movedToStorage.absolutePath}")
+                }
+                catch (e: Exception)
+                {
+                    Log.e("MusicApp", "The move failed", e)
+                    outputDest.delete()
+                }
             }
 
             override fun onError(composition: Composition, exportResult: ExportResult, exportException: ExportException) {
+
                 Log.e("MusicApp", "Transcode failed: ${outputDest.absolutePath}", exportException)
+                file.delete()
             }
         })
 
@@ -83,4 +94,9 @@ fun moveToPermanentStorage(file: File, context: Context, videoId: String): File 
     val fileTransfer = file.copyTo(destination, true)
     file.delete()
     return fileTransfer
+}
+
+fun isAlreadyImported(videoId: String, context: Context): Boolean{
+    val destination = File(context.filesDir, "${videoId}.m4a" )
+    return destination.exists()
 }
