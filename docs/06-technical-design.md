@@ -81,3 +81,17 @@ Observed once: `SocketTimeoutException` during step 2 (`copyTo` in `downloadAudi
 - Known risk: the filename pattern `"${videoId}.m4a"` is written in two functions (`moveToPermanentStorage`, `isAlreadyImported`). If they drift apart, the check stops finding anything without any error. A candidate for a small shared helper later.
 
 **Logging:** the step 1 log (URL / format / bitrate / ID) now runs right after `getAudioStream`, so it prints on every path, including duplicates and failed downloads. The `Download file:` log runs right after the download, while `raw_audio` still exists.
+
+## Pipeline moved into a ViewModel (2026-10-09)
+
+The temporary `Thread {}` in `MainActivity` had three problems: the import ran on every app start, the logic lived in the screen, and rotation (Android destroys and recreates the Activity) left the old `Thread` running while holding the dead Activity, and `onCreate` started a second import.
+
+- **`ImportViewModel`** (`ImportViewModel.kt`) owns the pipeline. One public method: `importAudio(url: String)`. It returns nothing: the work finishes later, so the result will be exposed as state the screen observes (once there is a UI).
+- **`AndroidViewModel`, not `ViewModel`:** the pipeline needs a `Context` (`cacheDir`, `filesDir`, `Transformer.Builder`). Passing the Activity in would leak it on rotation, since the coroutine outlives the screen. `AndroidViewModel` provides the Application context via `getApplication<Application>()`. It lives as long as the app, so there is nothing to leak.
+- **Threads:** `viewModelScope.launch(Dispatchers.IO)` replaces `Thread {}` (blocking network/file work). `withContext(Dispatchers.Main)` replaces `runOnUiThread` for `transcodeToAac` (Transformer needs a Looper thread). `viewModelScope` cancels the coroutine when the ViewModel is cleared.
+- **Getting the ViewModel:** `MainActivity` uses `by viewModels()`, which returns the same instance across rotations. Constructing it with `ImportViewModel(...)` would create a new one on every `onCreate`, and the old one would never be cleared.
+- **Temporary trigger:** `onCreate` still calls `importAudio(<test URL>)`, so rotation calls it again. This is harmless for an already-imported video, but rotating mid-download on a new URL would start a second, racing import (both pass the duplicate check before either saves). Accepted for now: the real trigger will be a button.
+- Dependency added: `androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7`. This matches the lifecycle 2.8.x that `activity-compose` 1.9.3 already pulls in, and needs compileSdk 34 or higher.
+- All three paths confirmed on-device: duplicate, skip (M4A), and transcode (tested with the format check temporarily flipped).
+
+**HTTP status check (step 2):** `downloadAudioToCache` saved the response body whatever the status, so an error reply (e.g. 403) was written to `raw_audio` and only failed later, as a confusing Transformer `UnrecognizedInputFormatException`. This was observed once, after a 0.6 s "download". The cause was not proven, but it is most likely a server error reply. It now throws right after `execute()` when `!response.isSuccessful`, including `response.code` in the message, so the failure lands in the ViewModel's `try/catch` with the real status code.

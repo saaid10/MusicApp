@@ -42,6 +42,7 @@ fun downloadAudioToCache(url: String, context: Context): File {
         .build()
 
     val response = client.newCall(request).execute()
+    if (!response.isSuccessful) error("Download failed code: ${response.code}")
 
     val inputStream = response.body?.byteStream()
 
