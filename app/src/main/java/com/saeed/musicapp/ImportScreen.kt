@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Album
@@ -40,10 +41,12 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.unit.dp
 
 @Composable
 fun ImportScreen() {
+    val clipboard = LocalClipboardManager.current
     var url by remember { mutableStateOf("") }
     var title by remember { mutableStateOf("") }
     var artist by remember { mutableStateOf("") }
@@ -66,12 +69,39 @@ fun ImportScreen() {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        MetaDataField(label = "Source URL", value = url, onValueChange = {url = it}, placeholder = "Paste a link", icon = Icons.Rounded.Link, required = true,
-            trailing = {if (url.isNotEmpty()) {
-            IconButton(onClick = {url = ""}) {
-                Icon(Icons.Rounded.Cancel, contentDescription = "Clear link")
+        MetaDataField(
+            label = "Source URL",
+            value = url,
+            onValueChange = { url = it },
+            placeholder = "Paste a link",
+            icon = Icons.Rounded.Link,
+            required = true,
+            trailing = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (url.isNotEmpty()) {
+                        IconButton(onClick = { url = "" }) {
+                            Icon(Icons.Rounded.Cancel, contentDescription = "Clear link")
+                        }
+                    }
+                    Surface(
+                        onClick = {url = clipboard.getText()?.text ?: url},
+                        shape = MaterialTheme.shapes.small,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        )
+                        {
+                            Icon(Icons.Rounded.ContentPaste, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
+                            Text("Paste", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                    Spacer(Modifier.width(8.dp))
+                }
             }
-        } })
+        )
 
         // Metadata card: groups title, artist and album in one box
         Surface(
