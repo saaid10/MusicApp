@@ -22,6 +22,7 @@ import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -65,13 +66,12 @@ fun ImportScreen() {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        OutlinedTextField(
-            modifier = Modifier.fillMaxWidth(),
-            value = url,
-            onValueChange = { url = it }, label = { Text("URL") },
-            shape = RectangleShape,
-            colors = fieldColors(MaterialTheme.colorScheme.surfaceVariant)
-        )
+        MetaDataField(label = "Source URL", value = url, onValueChange = {url = it}, placeholder = "Paste a link", icon = Icons.Rounded.Link, required = true,
+            trailing = {if (url.isNotEmpty()) {
+            IconButton(onClick = {url = ""}) {
+                Icon(Icons.Rounded.Cancel, contentDescription = "Clear link")
+            }
+        } })
 
         // Metadata card: groups title, artist and album in one box
         Surface(
@@ -162,7 +162,8 @@ private fun MetaDataField(
     onValueChange: (String) -> Unit,
     placeholder: String,
     icon: ImageVector,
-    required: Boolean = false
+    required: Boolean = false,
+    trailing: (@Composable () -> Unit)? = null
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -197,6 +198,7 @@ private fun MetaDataField(
         }
         OutlinedTextField(
             leadingIcon = { Icon(icon, contentDescription = null) },
+            trailingIcon = trailing,
             placeholder = { Text(placeholder) },
             modifier = Modifier.fillMaxWidth(),
             value = value,
