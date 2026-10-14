@@ -10,7 +10,8 @@ val Night = Color(0xFF121212)        // Neutral / background
 
 // Supporting shades for text and surfaces on the dark background
 val OnAccent = Color(0xFF04261A)     // text on emerald/teal/mint
-val SurfaceRaised = Color(0xFF1E1E1E) // cards, text fields
+val SurfaceRaised = Color(0xFF1E1E1E) // cards
+val FieldFill = Color(0xFF262626)     // input boxes, a shade lighter than cards
 val TextPrimary = Color(0xFFEDEDED)
 val TextSecondary = Color(0xFFA3A3A3)
 val Outline = Color(0xFF3A3A3A)

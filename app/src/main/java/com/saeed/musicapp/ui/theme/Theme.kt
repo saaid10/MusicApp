@@ -22,6 +22,7 @@ private val AppColors = darkColorScheme(
     surfaceVariant = SurfaceRaised,
     onSurfaceVariant = TextSecondary,
     surfaceContainer = SurfaceRaised,
+    surfaceContainerHigh = FieldFill,
     outline = Outline,
     error = ErrorRed,
 )
