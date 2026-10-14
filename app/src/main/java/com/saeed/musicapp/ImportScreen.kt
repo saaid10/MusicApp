@@ -54,7 +54,15 @@ fun ImportScreen() {
             .padding(horizontal = 16.dp, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        )
+        {
         Text("Import", style = MaterialTheme.typography.headlineLarge)
+            Text("Add music to your offline library from web links",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         OutlinedTextField(
             modifier = Modifier.fillMaxWidth(),
             value = url,
