@@ -3,6 +3,7 @@ package com.saeed.musicapp
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -30,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
@@ -70,10 +72,31 @@ fun ImportScreen() {
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
 
-                MetaDataField(label = "Song title", value = title, onValueChange = { title = it }, placeholder = "Song goes here", icon = Icons.Rounded.MusicNote, required = true)
-                MetaDataField(label = "Artist", value = artist, onValueChange = {artist = it}, placeholder = "Artist (optional)", icon = Icons.Rounded.Mic, required = false)
-                MetaDataField(label = "Album", value = album, onValueChange = {album = it}, placeholder = "Album (optional)", Icons.Rounded.Album, required = false)
-                
+                MetaDataField(
+                    label = "Song title",
+                    value = title,
+                    onValueChange = { title = it },
+                    placeholder = "Song goes here",
+                    icon = Icons.Rounded.MusicNote,
+                    required = true
+                )
+                MetaDataField(
+                    label = "Artist",
+                    value = artist,
+                    onValueChange = { artist = it },
+                    placeholder = "Artist",
+                    icon = Icons.Rounded.Mic,
+                    required = false
+                )
+                MetaDataField(
+                    label = "Album",
+                    value = album,
+                    onValueChange = { album = it },
+                    placeholder = "Album",
+                    icon = Icons.Rounded.Album,
+                    required = false
+                )
+
             }
         }
 
@@ -93,22 +116,47 @@ fun ImportScreen() {
     }
 }
 
-@Composable private fun MetaDataField (label: String, value: String, onValueChange: (String) -> Unit, placeholder: String, icon: ImageVector, required: Boolean = false) {
+@Composable
+private fun MetaDataField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    icon: ImageVector,
+    required: Boolean = false
+) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row() {
-            Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface)
-            if (required)
-            {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+
+            Text(
+                label,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            if (required) {
                 Text(
                     " *",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary
                 )
             }
+            Spacer(Modifier.weight(1f))
+            if (!required) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh
+                )
+                {
+                    Text(
+                        "Optional",
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         }
         OutlinedTextField(
-            leadingIcon = { Icon(icon, contentDescription = null)},
-            placeholder = {Text(placeholder)},
+            leadingIcon = { Icon(icon, contentDescription = null) },
+            placeholder = { Text(placeholder) },
             modifier = Modifier.fillMaxWidth(),
             value = value,
             onValueChange = onValueChange,
