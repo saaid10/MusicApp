@@ -95,3 +95,16 @@ The temporary `Thread {}` in `MainActivity` had three problems: the import ran o
 - All three paths confirmed on-device: duplicate, skip (M4A), and transcode (tested with the format check temporarily flipped).
 
 **HTTP status check (step 2):** `downloadAudioToCache` saved the response body whatever the status, so an error reply (e.g. 403) was written to `raw_audio` and only failed later, as a confusing Transformer `UnrecognizedInputFormatException`. This was observed once, after a 0.6 s "download". The cause was not proven, but it is most likely a server error reply. It now throws right after `execute()` when `!response.isSuccessful`, including `response.code` in the message, so the failure lands in the ViewModel's `try/catch` with the real status code.
+
+## Import UI design (2026-10-14)
+
+Mockup made in Google Stitch, used as a visual reference only. Compose can't import HTML/CSS, so only the design tokens carry over.
+
+- **Design tokens ("Nocturne Audio"):** Primary `#10B981`, Secondary `#2DD4BF`, Tertiary `#A7F3D0`, Neutral/background `#121212`. Font: Plus Jakarta Sans. Pill-shaped buttons and chips, rounded cards.
+- **Fields:** URL (required, with a paste button), Song title (required), Artist (optional), Album (optional). The Import button stays disabled until the URL is valid.
+- **Filename vs title:** the file stays `videoId.m4a`, and the title, artist and album are stored separately as metadata. Duplicate detection keeps working, and two songs with the same title can't collide.
+- **Metadata storage:** for now title, artist and album are collected but **not stored**. They get saved once Room exists. This is a known "looks like it works but doesn't" gap until then.
+- **States:** idle, importing, success ("Saved to library"), already in library (Skip highlighted, or Replace), failed (message + Try again).
+- **Progress:** an indeterminate bar for the MVP. A real 0–100% (with optional download speed) is deferred: it means replacing `copyTo` with a byte-counting loop plus `Content-Length`, it only covers the download step, and for files under 10 MB it's barely visible.
+- **Failure messages:** plain hints such as "No internet connection" or "Invalid link" are wanted. This needs the `catch` to tell the causes apart (open question).
+- **Dropped from the mockup:** "Keep Both Copies" (it would collide on `videoId.m4a`), quality upgrade / 320 kbps / lossless (contradicts the ≤192 kbps M4A rule), ID3 tagging (that's mp3, not m4a), the bottom nav bar (no other screens yet), the "Supported: YouTube, SoundCloud, Bandcamp" claim (untested), the waveform, and the "Engine ready" chip (it would show a fake status).

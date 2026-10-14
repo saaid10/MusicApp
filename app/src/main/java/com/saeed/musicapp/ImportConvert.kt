@@ -57,7 +57,7 @@ fun downloadAudioToCache(url: String, context: Context): File {
 }
 
 @OptIn(UnstableApi::class)
-fun transcodeToAac(file: File, context: Context, videoId: String): Unit {
+fun transcodeToAac(file: File, context: Context, videoId: String, onSuccess: () -> Unit, onFailure: (String) -> Unit): Unit {
     val mediaItem = MediaItem.fromUri(Uri.fromFile(file))
 
     val outputDest = File(context.cacheDir, "converted_audio")
@@ -70,12 +70,14 @@ fun transcodeToAac(file: File, context: Context, videoId: String): Unit {
                 file.delete()
                 try {
                     val movedToStorage = moveToPermanentStorage(outputDest, context, videoId)
+                    onSuccess()
                     Log.d("MusicApp", "File moved to storage: ${movedToStorage.absolutePath}")
                 }
                 catch (e: Exception)
                 {
                     Log.e("MusicApp", "The move failed", e)
                     outputDest.delete()
+                    onFailure("Saving the song failed. Try again")
                 }
             }
 
@@ -83,6 +85,7 @@ fun transcodeToAac(file: File, context: Context, videoId: String): Unit {
 
                 Log.e("MusicApp", "Transcode failed: ${outputDest.absolutePath}", exportException)
                 file.delete()
+                onFailure("Converting the Audio failed. Try again")
             }
         })
 

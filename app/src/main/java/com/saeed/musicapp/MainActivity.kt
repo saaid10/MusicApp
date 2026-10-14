@@ -16,7 +16,7 @@ class MainActivity : ComponentActivity() {
 
         NewPipe.init(DownloaderImpl())
 
-        viewModel.importAudio("https://www.youtube.com/watch?v=Y4HWvsGs0rY")
+        viewModel.importAudio("https://www.youtube.com/watch?v=Y4HWvsGs0rY", "Love-Sic", "Nujabes", null)
 
         setContent {
             MaterialTheme {
