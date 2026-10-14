@@ -2,12 +2,23 @@ package com.saeed.musicapp
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Album
+import androidx.compose.material.icons.rounded.Cancel
+import androidx.compose.material.icons.rounded.ContentPaste
+import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -23,22 +34,31 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 
-@Composable fun ImportScreen() {
+@Composable
+fun ImportScreen() {
     var url by remember { mutableStateOf("") }
 
     var title by remember { mutableStateOf("") }
     var artist by remember { mutableStateOf("") }
     var album by remember { mutableStateOf("") }
 
-    Column (modifier = Modifier.safeDrawingPadding().padding(horizontal = 16.dp, vertical = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(
+        modifier = Modifier
+            .safeDrawingPadding()
+            .padding(horizontal = 16.dp, vertical = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
         Text("Import", style = MaterialTheme.typography.headlineLarge)
-        OutlinedTextField(modifier = Modifier.fillMaxWidth(),
-            value =  url,
-            onValueChange = {url = it}, label = { Text("URL") },
+        OutlinedTextField(
+            modifier = Modifier.fillMaxWidth(),
+            value = url,
+            onValueChange = { url = it }, label = { Text("URL") },
             shape = RectangleShape,
-            colors = fieldColors(MaterialTheme.colorScheme.surfaceVariant))
+            colors = fieldColors(MaterialTheme.colorScheme.surfaceVariant)
+        )
 
         // Metadata card: groups title, artist and album in one box
         Surface(
@@ -49,28 +69,17 @@ import androidx.compose.ui.unit.dp
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                OutlinedTextField(modifier = Modifier.fillMaxWidth(),
-                    value = title,
-                    onValueChange = {title = it}, label = {Text("Song title")},
-                    shape = RectangleShape,
-                    colors = fieldColors(MaterialTheme.colorScheme.surfaceContainerHigh))
 
-                OutlinedTextField(modifier = Modifier.fillMaxWidth(),
-                    value = artist,
-                    onValueChange = {artist = it}, label = {Text("Artist (optional)")},
-                    shape = RectangleShape,
-                    colors = fieldColors(MaterialTheme.colorScheme.surfaceContainerHigh))
-
-                OutlinedTextField(modifier = Modifier.fillMaxWidth(),
-                    value = album,
-                    onValueChange = {album = it}, label = {Text("Album (optional)")},
-                    shape = RectangleShape,
-                    colors = fieldColors(MaterialTheme.colorScheme.surfaceContainerHigh))
+                MetaDataField(label = "Song title", value = title, onValueChange = { title = it }, placeholder = "Song goes here", icon = Icons.Rounded.MusicNote, required = true)
+                MetaDataField(label = "Artist", value = artist, onValueChange = {artist = it}, placeholder = "Artist (optional)", icon = Icons.Rounded.Mic, required = false)
+                MetaDataField(label = "Album", value = album, onValueChange = {album = it}, placeholder = "Album (optional)", Icons.Rounded.Album, required = false)
+                
             }
         }
 
         // Taller pill with a soft emerald glow
-        Button(onClick = {},
+        Button(
+            onClick = {},
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
@@ -81,6 +90,31 @@ import androidx.compose.ui.unit.dp
                     spotColor = MaterialTheme.colorScheme.primary
                 )
         ) { Text("Import") }
+    }
+}
+
+@Composable private fun MetaDataField (label: String, value: String, onValueChange: (String) -> Unit, placeholder: String, icon: ImageVector, required: Boolean = false) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row() {
+            Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface)
+            if (required)
+            {
+                Text(
+                    " *",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+        OutlinedTextField(
+            leadingIcon = { Icon(icon, contentDescription = null)},
+            placeholder = {Text(placeholder)},
+            modifier = Modifier.fillMaxWidth(),
+            value = value,
+            onValueChange = onValueChange,
+            shape = RectangleShape,
+            colors = fieldColors(MaterialTheme.colorScheme.surfaceContainerHigh)
+        )
     }
 }
 
