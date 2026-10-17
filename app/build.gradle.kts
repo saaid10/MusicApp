@@ -44,6 +44,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended") // link, music note, mic, album, tune, paste icons
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7") // ViewModel + viewModelScope
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7") // collectAsStateWithLifecycle
 
     // Import & Convert pipeline
     implementation("com.github.teamnewpipe:NewPipeExtractor:v0.26.5") // step 1: URL -> direct audio stream URL

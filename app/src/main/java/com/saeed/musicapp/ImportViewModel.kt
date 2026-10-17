@@ -71,6 +71,10 @@ class ImportViewModel(application: Application) : AndroidViewModel(application) 
             }
         }
     }
+
+    fun resetState() {
+        _uiState.value = ImportUiState.Idle
+    }
 }
 
 

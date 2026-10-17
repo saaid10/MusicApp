@@ -17,12 +17,10 @@ class MainActivity : ComponentActivity() {
 
         NewPipe.init(DownloaderImpl())
 
-        viewModel.importAudio("https://www.youtube.com/watch?v=Y4HWvsGs0rY", "Love-Sic", "Nujabes", null)
-
         setContent {
             MusicAppTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    ImportScreen()
+                    ImportScreen(viewModel)
                 }
             }
         }
