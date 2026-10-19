@@ -45,7 +45,7 @@ class ImportViewModel(application: Application) : AndroidViewModel(application) 
                         {
                             transcodeToAac(audioCache, context =getApplication<Application>(), importedAudio.videoId,
                                 onSuccess = {_uiState.value = ImportUiState.Success(title, artist)},
-                                onFailure = {message -> _uiState.value = ImportUiState.Failed(message) })
+                                onFailure = {message -> _uiState.value = ImportUiState.Failed(message, "Try again or use a different link") })
                         }
                     }
                     else
@@ -60,13 +60,13 @@ class ImportViewModel(application: Application) : AndroidViewModel(application) 
             {
                val msg = when (e)
                 {
-                    is UnknownHostException -> "No Internet. Connect to start converting"
-                    is IOException -> "Connection Problem. Check your internet connection"
-                    is ContentNotAvailableException -> "Video private/blocked. Try another source"
-                    is ExtractionException -> "Link not supported. Try another source"
-                    else -> "Something went wrong"
+                    is UnknownHostException -> "No Internet." to "Connect to start converting"
+                    is IOException -> "Connection Problem." to "Check your internet connection"
+                    is ContentNotAvailableException -> "Video private/blocked." to "Try another source"
+                    is ExtractionException -> "Link not supported." to "Try another source"
+                    else -> "Something went wrong." to "Try again or use different link"
                 }
-                _uiState.value = ImportUiState.Failed(msg)
+                _uiState.value = ImportUiState.Failed(msg.first, msg.second)
                 Log.e("MusicApp", "The import failed", e)
             }
         }

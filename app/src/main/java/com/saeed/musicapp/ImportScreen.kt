@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.HelpOutline
+import androidx.compose.material.icons.rounded.LinkOff
 import androidx.compose.material.icons.rounded.Album
 import androidx.compose.material.icons.rounded.Autorenew
 import androidx.compose.material.icons.rounded.Cancel
@@ -71,6 +73,7 @@ fun ImportScreen(viewModel: ImportViewModel) {
     var artist by remember { mutableStateOf("") }
     var album by remember { mutableStateOf("") }
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val currentState = state
 
     Column(
         modifier = Modifier
@@ -89,6 +92,10 @@ fun ImportScreen(viewModel: ImportViewModel) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+        if (currentState is ImportUiState.Failed)
+        {
+            ImportFailedCard(currentState.failedMsg)
         }
         MetaDataField(
             label = "Source URL",
@@ -121,6 +128,12 @@ fun ImportScreen(viewModel: ImportViewModel) {
                     }
                     Spacer(Modifier.width(8.dp))
                 }
+            },
+            errorText = if (currentState is ImportUiState.Failed){
+                "Check if the link is valid and try again"
+            }
+            else{
+                null
             }
         )
 
@@ -184,7 +197,13 @@ fun ImportScreen(viewModel: ImportViewModel) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Button(
-                onClick = { viewModel.importAudio(url, title, artist.ifBlank { null }, album.ifBlank { null })},
+                onClick = {
+                    if (currentState is ImportUiState.Failed) {
+                        viewModel.resetState()
+                    } else {
+                        viewModel.importAudio(url, title, artist.ifBlank { null }, album.ifBlank { null })
+                    }
+                },
                 enabled = canImport,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -195,7 +214,7 @@ fun ImportScreen(viewModel: ImportViewModel) {
                         ambientColor = MaterialTheme.colorScheme.primary,
                         spotColor = MaterialTheme.colorScheme.primary
                     )
-            ) { Text("Import", style = MaterialTheme.typography.titleMedium) }
+            ) { Text(if(currentState is ImportUiState.Failed) {"Try Again"} else {"Import"}, style = MaterialTheme.typography.titleMedium) }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -204,7 +223,7 @@ fun ImportScreen(viewModel: ImportViewModel) {
                 Text("Imported files are stored locally on your device.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        when (state) {
+        when (currentState) {
             is ImportUiState.Idle -> {}
             is ImportUiState.Importing -> {Text("Importing...")}
             is ImportUiState.Success -> {Text("Saved to library")}
@@ -220,7 +239,7 @@ fun ImportScreen(viewModel: ImportViewModel) {
                 },
                 onReplace = {},
                 onDismiss = {viewModel.resetState()},)}
-            is ImportUiState.Failed -> {Text("Import failed")}
+            is ImportUiState.Failed -> {TroubleshootingCard(currentState.failedHint)}
         }
     }
 }
@@ -233,7 +252,8 @@ private fun MetaDataField(
     placeholder: String,
     icon: ImageVector,
     required: Boolean = false,
-    trailing: (@Composable () -> Unit)? = null
+    trailing: (@Composable () -> Unit)? = null,
+    errorText: String? = null // non-null = red box + this message under it
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -274,8 +294,83 @@ private fun MetaDataField(
             value = value,
             onValueChange = onValueChange,
             shape = RectangleShape,
-            colors = fieldColors(MaterialTheme.colorScheme.surfaceContainerHigh)
+            colors = fieldColors(MaterialTheme.colorScheme.surfaceContainerHigh),
+            isError = errorText != null,
+            supportingText = errorText?.let { { Text(it) } }
         )
+    }
+}
+
+// Red-tinted card at the top of the screen when the import failed
+@Composable
+fun ImportFailedCard(message: String) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = MaterialTheme.shapes.large
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.error.copy(alpha = 0.15f)) {
+                Icon(
+                    Icons.Rounded.LinkOff,
+                    contentDescription = null,
+                    modifier = Modifier.padding(10.dp).size(24.dp),
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    "Import Failed",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+    }
+}
+
+// Tips box under the buttons; the hint comes from the ViewModel
+@Composable
+fun TroubleshootingCard(hint: String) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = MaterialTheme.shapes.large
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Rounded.HelpOutline,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    "Troubleshooting Tips",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            Text(
+                "• $hint",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
@@ -379,5 +474,6 @@ fun AlreadyInLibrarySheet(
 private fun fieldColors(fill: Color): TextFieldColors = OutlinedTextFieldDefaults.colors(
     unfocusedContainerColor = fill,
     focusedContainerColor = fill,
-    unfocusedBorderColor = Color.Transparent
+    unfocusedBorderColor = Color.Transparent,
+    errorContainerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.08f)
 )
