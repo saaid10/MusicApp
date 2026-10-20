@@ -7,6 +7,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -19,7 +20,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.LinkOff
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Album
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Autorenew
 import androidx.compose.material.icons.rounded.Cancel
 import androidx.compose.material.icons.rounded.Close
@@ -29,13 +33,16 @@ import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -74,6 +81,23 @@ fun ImportScreen(viewModel: ImportViewModel) {
     var album by remember { mutableStateOf("") }
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val currentState = state
+    val isImporting = currentState is ImportUiState.Importing
+
+    // Success replaces the whole form; "Import Another Song" brings back an empty form
+    if (currentState is ImportUiState.Success) {
+        ImportSuccessScreen(
+            title = currentState.title,
+            artist = currentState.artist,
+            onImportAnother = {
+                viewModel.resetState()
+                url = ""
+                title = ""
+                artist = ""
+                album = ""
+            }
+        )
+        return
+    }
 
     Column(
         modifier = Modifier
@@ -93,9 +117,11 @@ fun ImportScreen(viewModel: ImportViewModel) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        if (currentState is ImportUiState.Failed)
-        {
+        if (currentState is ImportUiState.Failed) {
             ImportFailedCard(currentState.failedMsg)
+        }
+        if (isImporting) {
+            ImportingCard()
         }
         MetaDataField(
             label = "Source URL",
@@ -104,17 +130,19 @@ fun ImportScreen(viewModel: ImportViewModel) {
             placeholder = "Paste a link",
             icon = Icons.Rounded.Link,
             required = true,
+            enabled = !isImporting,
             trailing = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (url.isNotEmpty()) {
-                        IconButton(onClick = { url = "" }) {
+                        IconButton(onClick = { url = "" }, enabled = !isImporting) {
                             Icon(Icons.Rounded.Cancel, contentDescription = "Clear link")
                         }
                     }
                     Surface(
-                        onClick = {url = clipboard.getText()?.text ?: url},
+                        onClick = { url = clipboard.getText()?.text ?: url },
                         shape = MaterialTheme.shapes.small,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                        enabled = !isImporting
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -122,17 +150,25 @@ fun ImportScreen(viewModel: ImportViewModel) {
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         )
                         {
-                            Icon(Icons.Rounded.ContentPaste, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
-                            Text("Paste", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                            Icon(
+                                Icons.Rounded.ContentPaste,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                "Paste",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
                         }
                     }
                     Spacer(Modifier.width(8.dp))
                 }
             },
-            errorText = if (currentState is ImportUiState.Failed){
+            errorText = if (currentState is ImportUiState.Failed) {
                 "Check if the link is valid and try again"
-            }
-            else{
+            } else {
                 null
             }
         )
@@ -169,7 +205,8 @@ fun ImportScreen(viewModel: ImportViewModel) {
                     onValueChange = { title = it },
                     placeholder = "Song goes here",
                     icon = Icons.Rounded.MusicNote,
-                    required = true
+                    required = true,
+                    enabled = !isImporting
                 )
                 MetaDataField(
                     label = "Artist",
@@ -177,7 +214,8 @@ fun ImportScreen(viewModel: ImportViewModel) {
                     onValueChange = { artist = it },
                     placeholder = "Artist",
                     icon = Icons.Rounded.Mic,
-                    required = false
+                    required = false,
+                    enabled = !isImporting
                 )
                 MetaDataField(
                     label = "Album",
@@ -185,12 +223,14 @@ fun ImportScreen(viewModel: ImportViewModel) {
                     onValueChange = { album = it },
                     placeholder = "Album",
                     icon = Icons.Rounded.Album,
-                    required = false
+                    required = false,
+                    enabled = !isImporting
                 )
 
             }
         }
-        val canImport = url.startsWith("http") && title.isNotBlank() && state !is ImportUiState.Importing
+        val canImport =
+            url.startsWith("http") && title.isNotBlank() && state !is ImportUiState.Importing
         // Taller pill with a soft emerald glow
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -201,10 +241,19 @@ fun ImportScreen(viewModel: ImportViewModel) {
                     if (currentState is ImportUiState.Failed) {
                         viewModel.resetState()
                     } else {
-                        viewModel.importAudio(url, title, artist.ifBlank { null }, album.ifBlank { null })
+                        viewModel.importAudio(
+                            url,
+                            title,
+                            artist.ifBlank { null },
+                            album.ifBlank { null })
                     }
                 },
                 enabled = canImport,
+                // Disabled = dimmed emerald instead of the default grey
+                colors = ButtonDefaults.buttonColors(
+                    disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                    disabledContentColor = MaterialTheme.colorScheme.onPrimary
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
@@ -214,32 +263,60 @@ fun ImportScreen(viewModel: ImportViewModel) {
                         ambientColor = MaterialTheme.colorScheme.primary,
                         spotColor = MaterialTheme.colorScheme.primary
                     )
-            ) { Text(if(currentState is ImportUiState.Failed) {"Try Again"} else {"Import"}, style = MaterialTheme.typography.titleMedium) }
+            ) {
+                if (isImporting) {
+                    ImportingButtonContent()
+                } else {
+                    Text(
+                        if (currentState is ImportUiState.Failed) {
+                            "Try Again"
+                        } else {
+                            "Import"
+                        }, style = MaterialTheme.typography.titleMedium
+                    )
+                }
+            }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Icon(Icons.Rounded.Lock, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
-                Text("Imported files are stored locally on your device.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(
+                    Icons.Rounded.Lock,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    "Imported files are stored locally on your device.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
         when (currentState) {
             is ImportUiState.Idle -> {}
-            is ImportUiState.Importing -> {Text("Importing...")}
-            is ImportUiState.Success -> {Text("Saved to library")}
-            is ImportUiState.AlreadyInLibrary -> {AlreadyInLibrarySheet(
-                title = title,
-                artist = artist.ifBlank { null },
-                onSkip = {
-                    viewModel.resetState()
-                    url = ""
-                    title = ""
-                    artist = ""
-                    album = ""
-                },
-                onReplace = {},
-                onDismiss = {viewModel.resetState()},)}
-            is ImportUiState.Failed -> {TroubleshootingCard(currentState.failedHint)}
+            is ImportUiState.Importing -> {}
+            is ImportUiState.Success -> {} // handled at the top: own screen
+
+            is ImportUiState.AlreadyInLibrary -> {
+                AlreadyInLibrarySheet(
+                    title = title,
+                    artist = artist.ifBlank { null },
+                    onSkip = {
+                        viewModel.resetState()
+                        url = ""
+                        title = ""
+                        artist = ""
+                        album = ""
+                    },
+                    onReplace = {},
+                    onDismiss = { viewModel.resetState() },
+                )
+            }
+
+            is ImportUiState.Failed -> {
+                TroubleshootingCard(currentState.failedHint)
+            }
         }
     }
 }
@@ -253,7 +330,8 @@ private fun MetaDataField(
     icon: ImageVector,
     required: Boolean = false,
     trailing: (@Composable () -> Unit)? = null,
-    errorText: String? = null // non-null = red box + this message under it
+    errorText: String? = null, // non-null = red box + this message under it
+    enabled: Boolean = true
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -296,7 +374,8 @@ private fun MetaDataField(
             shape = RectangleShape,
             colors = fieldColors(MaterialTheme.colorScheme.surfaceContainerHigh),
             isError = errorText != null,
-            supportingText = errorText?.let { { Text(it) } }
+            supportingText = errorText?.let { { Text(it) } },
+            enabled = enabled
         )
     }
 }
@@ -313,11 +392,16 @@ fun ImportFailedCard(message: String) {
             modifier = Modifier.padding(16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.error.copy(alpha = 0.15f)) {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.error.copy(alpha = 0.15f)
+            ) {
                 Icon(
                     Icons.Rounded.LinkOff,
                     contentDescription = null,
-                    modifier = Modifier.padding(10.dp).size(24.dp),
+                    modifier = Modifier
+                        .padding(10.dp)
+                        .size(24.dp),
                     tint = MaterialTheme.colorScheme.error
                 )
             }
@@ -333,6 +417,175 @@ fun ImportFailedCard(message: String) {
                     color = MaterialTheme.colorScheme.error
                 )
             }
+        }
+    }
+}
+
+// Progress card at the top of the screen while the import runs.
+// Indeterminate bar for now; real 0-100% comes later
+@Composable
+fun ImportingCard() {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = MaterialTheme.shapes.large
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                ) {
+                    Icon(
+                        Icons.Rounded.Sync,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .padding(10.dp)
+                            .size(24.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            "Importing Audio…",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        // "Active" chip
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                "Active",
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                    Text(
+                        "Downloading and converting the audio",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            LinearProgressIndicator(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceContainerHigh
+            )
+        }
+    }
+}
+
+// What goes inside the Import button while importing: small spinner + label
+@Composable
+fun ImportingButtonContent() {
+    CircularProgressIndicator(
+        modifier = Modifier.size(18.dp),
+        strokeWidth = 2.dp,
+        color = MaterialTheme.colorScheme.onPrimary
+    )
+    Spacer(Modifier.width(10.dp))
+    Text("Importing…", style = MaterialTheme.typography.titleMedium)
+}
+
+// Full-screen confirmation after a successful import
+@Composable
+fun ImportSuccessScreen(title: String, artist: String?, onImportAnother: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .safeDrawingPadding()
+            .padding(horizontal = 16.dp, vertical = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)
+    ) {
+        // "Import complete" chip
+        Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)) {
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(Icons.Rounded.CheckCircle, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
+                Text("IMPORT COMPLETE", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            }
+        }
+        // Big check in a soft emerald circle
+        Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)) {
+            Surface(
+                modifier = Modifier.padding(16.dp),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary
+            ) {
+                Icon(
+                    Icons.Rounded.Check,
+                    contentDescription = null,
+                    modifier = Modifier.padding(16.dp).size(48.dp),
+                    tint = MaterialTheme.colorScheme.onPrimary
+                )
+            }
+        }
+        Text("Saved to Library!", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onSurface)
+        Text(
+            "The audio was downloaded and saved to your device.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+        // Song card: note icon stands in for the thumbnail (no artwork yet)
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            shape = MaterialTheme.shapes.large
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                    Icon(
+                        Icons.Rounded.MusicNote,
+                        contentDescription = null,
+                        modifier = Modifier.padding(12.dp).size(28.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                    if (artist != null) {
+                        Text(artist, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Button(
+            onClick = onImportAnother,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .shadow(
+                    elevation = 16.dp,
+                    shape = CircleShape,
+                    ambientColor = MaterialTheme.colorScheme.primary,
+                    spotColor = MaterialTheme.colorScheme.primary
+                )
+        ) {
+            Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("Import Another Song", style = MaterialTheme.typography.titleMedium)
         }
     }
 }
@@ -407,7 +660,9 @@ fun AlreadyInLibrarySheet(
                 Icon(
                     Icons.Rounded.LibraryMusic,
                     contentDescription = null,
-                    modifier = Modifier.padding(14.dp).size(28.dp),
+                    modifier = Modifier
+                        .padding(14.dp)
+                        .size(28.dp),
                     tint = Amber
                 )
             }
@@ -420,7 +675,12 @@ fun AlreadyInLibrarySheet(
             Text(
                 buildAnnotatedString {
                     append("This song is already in your library as ")
-                    withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)) {
+                    withStyle(
+                        SpanStyle(
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    ) {
                         append("‘$title’")
                     }
                     if (artist != null) append(" by $artist")
@@ -444,13 +704,19 @@ fun AlreadyInLibrarySheet(
                         spotColor = MaterialTheme.colorScheme.primary
                     )
             ) {
-                Icon(Icons.Rounded.Close, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(
+                    Icons.Rounded.Close,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
                 Spacer(Modifier.width(8.dp))
                 Text("Skip", style = MaterialTheme.typography.titleSmall)
             }
             FilledTonalButton(
                 onClick = onReplace,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
                 colors = ButtonDefaults.filledTonalButtonColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                     contentColor = MaterialTheme.colorScheme.onSurface
@@ -475,5 +741,11 @@ private fun fieldColors(fill: Color): TextFieldColors = OutlinedTextFieldDefault
     unfocusedContainerColor = fill,
     focusedContainerColor = fill,
     unfocusedBorderColor = Color.Transparent,
+    // Locked while importing: same box, text slightly dimmed
+    disabledContainerColor = fill,
+    disabledBorderColor = Color.Transparent,
+    disabledTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+    disabledLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+    disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
     errorContainerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.08f)
 )
