@@ -21,7 +21,8 @@ class ImportViewModel(application: Application) : AndroidViewModel(application) 
     private val _uiState = MutableStateFlow<ImportUiState>(ImportUiState.Idle)
     val uiState: StateFlow<ImportUiState> = _uiState.asStateFlow()
 
-    fun importAudio(url: String, title: String, artist: String?, album: String?) {
+    // skipDuplicateCheck = true when the user chose Replace: overwrite the existing file
+    fun importAudio(url: String, title: String, artist: String?, album: String?, skipDuplicateCheck: Boolean = false) {
         _uiState.value = ImportUiState.Importing
 
         viewModelScope.launch(Dispatchers.IO )
@@ -29,7 +30,7 @@ class ImportViewModel(application: Application) : AndroidViewModel(application) 
             try{
                 val importedAudio = getAudioStream(url)
                 Log.d("MusicApp", "Audio URL: ${importedAudio.audioStream.url}, Format: ${importedAudio.audioStream.format} Bitrate: ${importedAudio.audioStream.averageBitrate} VideoId: ${importedAudio.videoId}")
-                if (isAlreadyImported(importedAudio.videoId, context = getApplication<Application>()))
+                if (!skipDuplicateCheck && isAlreadyImported(importedAudio.videoId, context = getApplication<Application>()))
                 {
 
                     Log.d("MusicApp", "Already in the library")

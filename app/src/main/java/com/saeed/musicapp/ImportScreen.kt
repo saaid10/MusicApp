@@ -309,7 +309,15 @@ fun ImportScreen(viewModel: ImportViewModel) {
                         artist = ""
                         album = ""
                     },
-                    onReplace = {},
+                    onReplace = {
+                        viewModel.importAudio(
+                            url,
+                            title,
+                            artist.ifBlank { null },
+                            album.ifBlank { null },
+                            skipDuplicateCheck = true
+                        )
+                    },
                     onDismiss = { viewModel.resetState() },
                 )
             }
