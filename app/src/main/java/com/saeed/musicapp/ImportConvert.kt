@@ -1,10 +1,12 @@
 package com.saeed.musicapp
 
 import android.R
+import android.app.Application
 import android.content.Context
 import android.net.Uri
 import android.util.Log
 import androidx.annotation.OptIn
+import androidx.lifecycle.AndroidViewModel
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
@@ -21,6 +23,8 @@ import java.io.File
 
 
 data class ImportedAudio (val videoId: String, val audioStream: AudioStream)
+
+class DownloadFailedException(val responseCode: Int) : Exception("Download failed code: ${responseCode}")
 
 fun getAudioStream(url: String): ImportedAudio {
     val info = StreamInfo.getInfo(url)
@@ -42,7 +46,7 @@ fun downloadAudioToCache(url: String, context: Context): File {
         .build()
 
     val response = client.newCall(request).execute()
-    if (!response.isSuccessful) error("Download failed code: ${response.code}")
+    if (!response.isSuccessful) throw DownloadFailedException(response.code)
 
     val inputStream = response.body?.byteStream()
 

@@ -65,6 +65,7 @@ class ImportViewModel(application: Application) : AndroidViewModel(application) 
                     is IOException -> "Connection Problem." to "Check your internet connection"
                     is ContentNotAvailableException -> "Video private/blocked." to "Try another source"
                     is ExtractionException -> "Link not supported." to "Try another source"
+                    is DownloadFailedException -> "Download failed ${e.responseCode}" to "The source refused the download. Try again in a moment"
                     else -> "Something went wrong." to "Try again or use different link"
                 }
                 _uiState.value = ImportUiState.Failed(msg.first, msg.second)
