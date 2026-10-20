@@ -166,7 +166,7 @@ fun ImportScreen(viewModel: ImportViewModel) {
                     Spacer(Modifier.width(8.dp))
                 }
             },
-            errorText = if (currentState is ImportUiState.Failed) {
+            errorText = if (currentState is ImportUiState.Failed && currentState.isLinkError) {
                 "Check if the link is valid and try again"
             } else {
                 null
