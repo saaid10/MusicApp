@@ -103,7 +103,7 @@ Mockup made in Google Stitch, used as a visual reference only. Compose can't imp
 - **Design tokens ("Nocturne Audio"):** Primary `#10B981`, Secondary `#2DD4BF`, Tertiary `#A7F3D0`, Neutral/background `#121212`. Font: Plus Jakarta Sans. Pill-shaped buttons and chips, rounded cards.
 - **Fields:** URL (required, with a paste button), Song title (required), Artist (optional), Album (optional). The Import button stays disabled until the URL is valid.
 - **Filename vs title:** the file stays `videoId.m4a`, and the title, artist and album are stored separately as metadata. Duplicate detection keeps working, and two songs with the same title can't collide.
-- **Metadata storage:** for now title, artist and album are collected but **not stored**. They get saved once Room exists. This is a known "looks like it works but doesn't" gap until then.
+- **Metadata storage:** title, artist and album are stored in Room (see "Library database (Room)" below).
 - **States:** idle, importing, success ("Saved to library"), already in library (Skip highlighted, or Replace), failed (message + Try again).
 - **Progress:** an indeterminate bar for the MVP. A real 0–100% (with optional download speed) is deferred: it means replacing `copyTo` with a byte-counting loop plus `Content-Length`, it only covers the download step, and for files under 10 MB it's barely visible.
 - **Failure messages:** plain hints such as "No internet connection" or "Invalid link" are wanted. This needs the `catch` to tell the causes apart (resolved, see "Import screen implemented" below).
@@ -123,3 +123,30 @@ The Import screen (`ImportScreen.kt`) now drives the pipeline. The `onCreate` te
 - **Download failures:** step 2 now throws `DownloadFailedException(responseCode)` (extends `Exception`, not `IOException`: a 403 is the server refusing, not a connection problem). It shows as "Download failed <code>" instead of falling into "Something went wrong.". Verified by temporarily inverting the status check (showed 206).
 
 **Still open:** `error("No audio streams found")` in `getAudioStream` still lands in "Something went wrong."; the HTTP response is not closed when `DownloadFailedException` is thrown; the `"${videoId}.m4a"` filename is still duplicated in two functions.
+
+## Library database (Room) (2026-10-23 to 2026-10-24)
+
+Each imported song gets a row in a local Room (SQLite) database, `music.db`, stored at `/data/user/0/com.saeed.musicapp/databases/`. The audio stays a separate file in `filesDir` (`<videoId>.m4a`). The row holds the metadata and links to the file through `videoId`.
+
+**`Song` entity (`Song.kt`, table `songs`):**
+
+| Field | Type | Required | Source |
+|---|---|---|---|
+| `videoId` (primary key) | `String` | yes | NewPipe (`info.id`); also the filename |
+| `title` | `String` | yes | user |
+| `artist` | `String?` | no | user |
+| `album` | `String?` | no | user |
+| `dateAdded` | `Long` (epoch ms) | yes | app (`System.currentTimeMillis()`), used to sort newest first |
+| `duration` | `Long?` (seconds) | no | NewPipe (`info.duration`). Values ≤ 0 mean unknown and are stored as `null` in `getAudioStream`, the only place `info` is available, and carried out via `ImportedAudio.duration` |
+
+- **Thumbnail:** deferred until after the MVP. A URL alone would not show offline, unlike the songs themselves.
+- **`SongDao`:** `insert` (`OnConflictStrategy.REPLACE`, so **Replace** overwrites the row just as it overwrites the file), `getAllSongs(): Flow<List<Song>>` (`ORDER BY dateAdded DESC`; the Flow re-emits on every table change, so the Library updates by itself), `delete` (for storage management).
+- **`MusicDatabase`:** `@Database(entities = [Song::class], version = 1)`. Bump the version (with a migration) whenever the table changes.
+- **Single instance:** a custom `MusicApplication` (registered with `android:name` in the manifest) holds `val database by lazy { Room.databaseBuilder(...).build() }`. One object for the whole app avoids two writers on the same file, and `lazy` is thread-safe. This was chosen over a `companion object` `getInstance()` (same result, but that needs hand-written `@Volatile`/`synchronized`). The ViewModel reaches it via `getApplication<MusicApplication>().database`.
+- **When the row is written:** after the file move and before `Success`. Inserting at the tap would leave a row with no file when the import fails (the Library would show an unplayable song). Inserting before `Success` means the screen only claims success once the row is saved.
+- **Transcode path:** the insert runs inside `onSuccess`, which Media3 calls later on the main thread, after the import coroutine has already finished. So it starts its own `viewModelScope.launch(Dispatchers.IO)` (needed for the `suspend` insert) with its own `try/catch` (the outer `catch` can no longer see it).
+- **File and row stay together:** if the insert fails, the just-moved file is deleted (skip path: `movedToStorage.delete()`; transcode path: rebuilt from `filesDir` + `"${videoId}.m4a"`) and Failed shows "Couldn't save the song." Without that, the duplicate check (file-based) would report "Already in Library" for a song the Library never shows.
+- Dependencies: Room 2.7.2 (`room-runtime`, `room-ktx`, `room-compiler` via KSP `2.2.10-2.0.2`, matching Kotlin 2.2.10).
+- Verified on the emulator: skip path and transcode path (format check temporarily flipped) both write the row, and Replace overwrites it.
+
+**Still open:** on a Replace where the insert fails, the file is deleted but the old row remains; the duplicate check still looks at the file, not the database.
