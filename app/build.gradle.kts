@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("com.google.devtools.ksp")
 }
 
 android {
@@ -51,6 +52,11 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")              // HTTP client NewPipeExtractor's Downloader needs
     implementation("androidx.media3:media3-transformer:1.11.0")       // step 3: raw audio -> AAC
     implementation("androidx.media3:media3-common:1.11.0")
+
+    // Library storage (song metadata)
+    implementation("androidx.room:room-runtime:2.7.2")
+    implementation("androidx.room:room-ktx:2.7.2")   // suspend DAO functions + Flow
+    ksp("androidx.room:room-compiler:2.7.2")           // generates the DAO/Database code at build time
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")

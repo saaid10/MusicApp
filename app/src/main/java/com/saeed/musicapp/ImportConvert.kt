@@ -22,7 +22,7 @@ import org.schabi.newpipe.extractor.timeago.patterns.fil
 import java.io.File
 
 
-data class ImportedAudio (val videoId: String, val audioStream: AudioStream)
+data class ImportedAudio (val videoId: String, val audioStream: AudioStream, val duration: Long?)
 
 class DownloadFailedException(val responseCode: Int) : Exception("Download failed code: ${responseCode}")
 
@@ -35,7 +35,7 @@ fun getAudioStream(url: String): ImportedAudio {
     val withinLimit = knownBitrate.filter { it.averageBitrate <= 192 }
     val best = withinLimit.maxByOrNull { it.averageBitrate }
     val item = best ?: knownBitrate.minBy { it.averageBitrate }
-    return ImportedAudio(videoId = info.id, audioStream = item)
+    return ImportedAudio(videoId = info.id, audioStream = item, duration = if(info.duration > 0) info.duration else null)
 }
 
 fun downloadAudioToCache(url: String, context: Context): File {

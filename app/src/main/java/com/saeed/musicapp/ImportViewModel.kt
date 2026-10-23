@@ -14,6 +14,7 @@ import java.io.IOException
 import org.schabi.newpipe.extractor.MediaFormat
 import org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException
 import org.schabi.newpipe.extractor.exceptions.ExtractionException
+import java.io.File
 import java.net.UnknownHostException
 
 class ImportViewModel(application: Application) : AndroidViewModel(application) {
@@ -45,15 +46,40 @@ class ImportViewModel(application: Application) : AndroidViewModel(application) 
                         withContext(Dispatchers.Main)
                         {
                             transcodeToAac(audioCache, context =getApplication<Application>(), importedAudio.videoId,
-                                onSuccess = {_uiState.value = ImportUiState.Success(title, artist)},
+                                onSuccess = {
+                                    viewModelScope.launch(Dispatchers.IO)
+                                    {
+                                        try {
+                                            val song = Song(videoId = importedAudio.videoId, title = title, artist = artist, album = album, dateAdded = System.currentTimeMillis(), duration = importedAudio.duration)
+                                            getApplication<MusicApplication>().database.songDao().insert(song)
+                                            _uiState.value = ImportUiState.Success(title, artist)
+                                        }
+                                        catch (e: Exception)
+                                        {
+                                            File(getApplication<Application>().filesDir, "${importedAudio.videoId}.m4a").delete()
+                                            _uiState.value = ImportUiState.Failed(failedMsg = "Couldn't save the song", failedHint ="Try importing it again", isLinkError = false )
+                                            Log.e("MusicApp", "The import failed", e)
+                                        }
+                                    }
+                                },
                                 onFailure = {message -> _uiState.value = ImportUiState.Failed(message, "Try again or use a different link", false) })
                         }
                     }
                     else
                     {
                         val movedToStorage = moveToPermanentStorage(file = audioCache, context = getApplication<Application>(), importedAudio.videoId)
-                        _uiState.value = ImportUiState.Success(title, artist)
-                        Log.d("MusicApp", "File saved permanently: ${movedToStorage.absolutePath}")
+                        try {
+                            val song = Song(videoId = importedAudio.videoId, title = title, artist = artist, album = album, dateAdded = System.currentTimeMillis(), duration = importedAudio.duration)
+                            getApplication<MusicApplication>().database.songDao().insert(song)
+                            _uiState.value = ImportUiState.Success(title, artist)
+                            Log.d("MusicApp", "File saved permanently: ${movedToStorage.absolutePath}")
+                        }
+                        catch (e: Exception)
+                        {
+                            movedToStorage.delete()
+                            _uiState.value = ImportUiState.Failed(failedMsg = "Couldn't save the song", failedHint = "Try importing it again", isLinkError = false)
+                            Log.e("MusicApp", "Saving to the library failed", e)
+                        }
                     }
                 }
             }
