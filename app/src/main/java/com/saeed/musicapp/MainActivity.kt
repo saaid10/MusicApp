@@ -30,7 +30,13 @@ class MainActivity : ComponentActivity() {
         setContent {
             MusicAppTheme {
                 var selectedTab by rememberSaveable { mutableStateOf(AppTab.Library) }
+                var query by rememberSaveable { mutableStateOf("") }
                 val songs by libraryViewModel.songs.collectAsStateWithLifecycle()
+                val filteredSongs = songs.filter {
+                    it.title.contains(query,ignoreCase = true) ||
+                            it.artist?.contains(query, ignoreCase = true) == true ||
+                            it.album?.contains(query, ignoreCase = true) == true
+                }
                 Scaffold(
                     bottomBar = { AppBottomBar(selected = selectedTab, onTabClick = { selectedTab = it }) }
                 ) { innerPadding ->
@@ -45,9 +51,9 @@ class MainActivity : ComponentActivity() {
                         when(selectedTab) {
                             AppTab.Library -> {
                                 LibraryScreen(
-                                    songs,
-                                    query = "",
-                                    onQueryChange = { },
+                                    filteredSongs,
+                                    query = query,
+                                    onQueryChange = { query = it },
                                     storageUsed = "1.2 GB",
                                     onStorageClick = { },
                                     onShuffleClick = { },
