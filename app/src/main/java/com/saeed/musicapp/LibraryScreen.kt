@@ -86,7 +86,7 @@ fun LibraryScreen(
                 SongRow(
                     title = song.title,
                     artist = song.artist,
-                    durationText = null, // TODO: format song.duration as "m:ss"
+                    durationText = showDuration(duration = song.duration), 
                     isPlaying = false,
                     onClick = { onSongClick(song) },
                     onMoreClick = { onSongMoreClick(song) }
@@ -436,4 +436,16 @@ private fun LibraryEmptyPreview() {
 @Composable
 private fun NoSearchResultsPreview() {
     MusicAppTheme { NoSearchResults(query = "nujabes") }
+}
+
+private fun showDuration(duration: Long?): String? {
+    if (duration == null)
+    {
+        return null
+    }
+    val minutes = duration / 60
+    val seconds = duration % 60
+    val secondsText = if( seconds < 10) { "0$seconds"} else {"$seconds"}
+
+    return "$minutes:$secondsText"
 }
