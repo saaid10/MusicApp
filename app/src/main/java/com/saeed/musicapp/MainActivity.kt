@@ -50,16 +50,20 @@ class MainActivity : ComponentActivity() {
                     ) {
                         when(selectedTab) {
                             AppTab.Library -> {
-                                LibraryScreen(
-                                    filteredSongs,
-                                    query = query,
-                                    onQueryChange = { query = it },
-                                    storageUsed = "1.2 GB",
-                                    onStorageClick = { },
-                                    onShuffleClick = { },
-                                    onSongClick = { },
-                                    onSongMoreClick = { },
-                                )
+                                if (songs.isEmpty()) {
+                                    LibraryEmptyState( onImportClick = {selectedTab = AppTab.Import} )
+                                } else {
+                                    LibraryScreen(
+                                        filteredSongs,
+                                        query = query,
+                                        onQueryChange = { query = it },
+                                        storageUsed = "1.2 GB",
+                                        onStorageClick = { },
+                                        onShuffleClick = { },
+                                        onSongClick = { },
+                                        onSongMoreClick = { },
+                                    )
+                                }
                             }
                             AppTab.Playlists -> Text("Playlists coming soon")
                             AppTab.Import -> ImportScreen(viewModel)
