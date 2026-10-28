@@ -76,23 +76,27 @@ fun LibraryScreen(
         Spacer(Modifier.height(16.dp))
         LibrarySearchField(query = query, onQueryChange = onQueryChange)
         Spacer(Modifier.height(16.dp))
-        ShuffleRow(songCount = songs.size, onShuffleClick = onShuffleClick)
-        Spacer(Modifier.height(8.dp))
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(bottom = 24.dp)
-        ) {
-            items(songs, key = { it.videoId }) { song ->
-                SongRow(
-                    title = song.title,
-                    artist = song.artist,
-                    durationText = showDuration(duration = song.duration), 
-                    isPlaying = false,
-                    onClick = { onSongClick(song) },
-                    onMoreClick = { onSongMoreClick(song) }
-                )
+        if (songs.isEmpty()) {
+            NoSearchResults(query)
+        } else {
+            ShuffleRow(songCount = songs.size, onShuffleClick = onShuffleClick)
+            Spacer(Modifier.height(8.dp))
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(bottom = 24.dp)
+            ) {
+                items(songs, key = { it.videoId }) { song ->
+                    SongRow(
+                        title = song.title,
+                        artist = song.artist,
+                        durationText = showDuration(duration = song.duration),
+                        isPlaying = false,
+                        onClick = { onSongClick(song) },
+                        onMoreClick = { onSongMoreClick(song) }
+                    )
+                }
+                item { OfflineFooter() }
             }
-            item { OfflineFooter() }
         }
     }
 }
