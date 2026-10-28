@@ -200,7 +200,7 @@ private fun ShuffleRow(songCount: Int, onShuffleClick: () -> Unit) {
         }
         Spacer(Modifier.weight(1f))
         Text(
-            "$songCount songs",
+            if (songCount == 1) "1 song" else "$songCount songs",
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

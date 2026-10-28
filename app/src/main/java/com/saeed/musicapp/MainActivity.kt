@@ -32,7 +32,7 @@ class MainActivity : ComponentActivity() {
                 var selectedTab by rememberSaveable { mutableStateOf(AppTab.Library) }
                 var query by rememberSaveable { mutableStateOf("") }
                 val songs by libraryViewModel.songs.collectAsStateWithLifecycle()
-                val filteredSongs = songs.filter {
+                val filteredSongs = songs.orEmpty().filter {
                     it.title.contains(query,ignoreCase = true) ||
                             it.artist?.contains(query, ignoreCase = true) == true ||
                             it.album?.contains(query, ignoreCase = true) == true
@@ -50,7 +50,9 @@ class MainActivity : ComponentActivity() {
                     ) {
                         when(selectedTab) {
                             AppTab.Library -> {
-                                if (songs.isEmpty()) {
+                                if (songs == null) {
+                                    // Room has not answered yet: draw nothing instead of flashing the empty state
+                                } else if (songs?.isEmpty() == true) {
                                     LibraryEmptyState( onImportClick = {selectedTab = AppTab.Import} )
                                 } else {
                                     LibraryScreen(
