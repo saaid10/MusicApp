@@ -22,6 +22,8 @@ import org.schabi.newpipe.extractor.NewPipe
 class MainActivity : ComponentActivity() {
     private val viewModel: ImportViewModel by viewModels()
     private val libraryViewModel: LibraryViewModel by viewModels()
+    private val playerViewModel: PlayerViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -62,7 +64,7 @@ class MainActivity : ComponentActivity() {
                                         storageUsed = "1.2 GB",
                                         onStorageClick = { },
                                         onShuffleClick = { },
-                                        onSongClick = { },
+                                        onSongClick = { playerViewModel.playSong(it) },
                                         onSongMoreClick = { },
                                     )
                                 }

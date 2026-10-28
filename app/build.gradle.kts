@@ -52,6 +52,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")              // HTTP client NewPipeExtractor's Downloader needs
     implementation("androidx.media3:media3-transformer:1.11.0")       // step 3: raw audio -> AAC
     implementation("androidx.media3:media3-common:1.11.0")
+    implementation("androidx.media3:media3-exoplayer:1.11.0")         // playback
 
     // Library storage (song metadata)
     implementation("androidx.room:room-runtime:2.7.2")
