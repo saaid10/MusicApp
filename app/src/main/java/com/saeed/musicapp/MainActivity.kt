@@ -39,38 +39,66 @@ class MainActivity : ComponentActivity() {
                             it.artist?.contains(query, ignoreCase = true) == true ||
                             it.album?.contains(query, ignoreCase = true) == true
                 }
-                Scaffold(
-                    bottomBar = { AppBottomBar(selected = selectedTab, onTabClick = { selectedTab = it }) }
-                ) { innerPadding ->
-                    // innerPadding = status bar on top + bottom bar height; consumed so the
-                    // screens' own safeDrawingPadding doesn't add the same space again
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding)
-                            .consumeWindowInsets(innerPadding)
-                    ) {
-                        when(selectedTab) {
-                            AppTab.Library -> {
-                                if (songs == null) {
-                                    // Room has not answered yet: draw nothing instead of flashing the empty state
-                                } else if (songs?.isEmpty() == true) {
-                                    LibraryEmptyState( onImportClick = {selectedTab = AppTab.Import} )
-                                } else {
-                                    LibraryScreen(
-                                        filteredSongs,
-                                        query = query,
-                                        onQueryChange = { query = it },
-                                        storageUsed = "1.2 GB",
-                                        onStorageClick = { },
-                                        onShuffleClick = { },
-                                        onSongClick = { playerViewModel.playSong(it) },
-                                        onSongMoreClick = { },
-                                    )
+                var showNowPlaying by rememberSaveable { mutableStateOf(false) }
+                if (showNowPlaying) {
+                    NowPlayingScreen(
+                        // TEMPORARY placeholder values until PlayerViewModel shares the real song
+                        title = "Song title",
+                        artist = "Artist",
+                        album = null,
+                        playingFrom = "Library",
+                        isPlaying = true,
+                        progress = 0f,
+                        positionText = "0:00",
+                        durationText = "0:00",
+                        shuffleOn = false,
+                        repeatOn = false,
+                        onCollapseClick = { showNowPlaying = false },
+                        onMoreClick = { },
+                        onSeek = { },
+                        onShuffleClick = { },
+                        onPreviousClick = { },
+                        onPlayPauseClick = { },
+                        onNextClick = { },
+                        onRepeatClick = { },
+                    )
+                } else {
+                    Scaffold(
+                        bottomBar = { AppBottomBar(selected = selectedTab, onTabClick = { selectedTab = it }) }
+                    ) { innerPadding ->
+                        // innerPadding = status bar on top + bottom bar height; consumed so the
+                        // screens' own safeDrawingPadding doesn't add the same space again
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(innerPadding)
+                                .consumeWindowInsets(innerPadding)
+                        ) {
+                            when(selectedTab) {
+                                AppTab.Library -> {
+                                    if (songs == null) {
+                                        // Room has not answered yet: draw nothing instead of flashing the empty state
+                                    } else if (songs?.isEmpty() == true) {
+                                        LibraryEmptyState( onImportClick = {selectedTab = AppTab.Import} )
+                                    } else {
+                                        LibraryScreen(
+                                            filteredSongs,
+                                            query = query,
+                                            onQueryChange = { query = it },
+                                            storageUsed = "1.2 GB",
+                                            onStorageClick = { },
+                                            onShuffleClick = { },
+                                            onSongClick = {
+                                                playerViewModel.playSong(it)
+                                                showNowPlaying =  true
+                                            },
+                                            onSongMoreClick = { },
+                                        )
+                                    }
                                 }
+                                AppTab.Playlists -> Text("Playlists coming soon")
+                                AppTab.Import -> ImportScreen(viewModel)
                             }
-                            AppTab.Playlists -> Text("Playlists coming soon")
-                            AppTab.Import -> ImportScreen(viewModel)
                         }
                     }
                 }
